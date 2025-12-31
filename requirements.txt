@@ -1,0 +1,26 @@
+# Core dependencies
+metatrader5
+pandas
+numpy
+
+# Reinforcement Learning
+gymnasium
+stable-baselines3
+torch
+
+# Visualization
+matplotlib
+seaborn
+
+# Technical Analysis
+ta
+
+# Utilities
+scikit-learn
+pyyaml
+
+# Optional: Hyperparameter optimization
+optuna
+
+# Optional: Progress bars
+tqdm
