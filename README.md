@@ -2,6 +2,14 @@
 
 Advanced reinforcement learning trading suite using Proximal Policy Optimization (PPO). This platform has evolved from a research project into a fully automated, multi-asset institutional trading system.
 
+## 🚀 Professional Workflow
+1. **Brain Training**: Use `universal_trainer.py` to master Gold (XAUUSD), Silver (XAGUSD), or Oil (WTI).
+2. **Maintenance**: `retrain_pipeline.py` maintains alpha through "Champion vs Challenger" logic.
+3. **Control**: Manage everything via the FastAPI Command Center (`api_server.py`).
+4. **Deploy**: 
+   - **Local**: Run `multi_instance_trader.py` for Python-based orchestration.
+   - **Native**: Export via `export_onnx.py` and run inside MT5 with `ppo_sniper_native.mq5`.
+
 ## 🚀 The Sniper Ecosystem
 
 This suite consists of four specialized layers designed for high-performance trading of Gold (XAUUSD), Silver (XAGUSD), and Oil (WTI).
@@ -35,6 +43,12 @@ The master entry point for the entire system. Provides a web-based UI to manage 
 - **Features**: Remote Start/Stop traders, trigger retraining, and monitor MT5 health.
 - **Documentation**: Swagger UI at `http://localhost:8000/docs`.
 
+### 6. ONNX Native Exporter (`export_onnx.py`) [NEW] 🦾
+Migrate from Python-bridge to a **Native MQL5 Expert Advisor**.
+- **Run**: `py -3.11 export_onnx.py [SYMBOL]`
+- **Logic**: Extracts the PPO brain and embeds the `VecNormalize` statistics (mean/var) directly into a standalone `.onnx` file.
+- **Deployment**: Place the resulting `.onnx` file in your MT5 `MQL5/Files` directory and use the template in `mql5/ppo_sniper_template.mq5`.
+
 ---
 
 ## 🏗️ Project Structure
@@ -53,8 +67,10 @@ PPO_trader/
 ├── evaluation/                # ⚖️ Backtesting & Metrics
 ├── logs/                      # 📈 TensorBoard & Live CSV Logs
 ├── results/                   # 🖼️ Dashboards & PNG Reports
+├── mql5/                      # 🦾 Native MT5 Expert Advisors (ONNX)
+│   └── ppo_sniper_native.mq5  # Deployment-ready Expert Advisor
 │
-├── live_trader_mt5_v2.py      # Single-asset Gold Live Trader
+├── api_server.py              # 🛰️ Master Command Center (FastAPI)
 ├── multi_instance_trader.py   # Multi-asset Execution Manager
 ├── retrain_pipeline.py        # Automated Maintenance
 ├── universal_trainer.py       # Specialist Training 

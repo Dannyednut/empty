@@ -29,3 +29,8 @@ python-multipart
 
 # Optional: Hyperparameter optimization
 optuna
+
+# Native MQL5 Deployment (ONNX)
+onnx
+onnxscript
+onnxruntime
