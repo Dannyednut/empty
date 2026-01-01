@@ -28,6 +28,13 @@ The ultimate execution bridge that manages multiple experts simultaneously.
 - **Run**: `py -3.11 multi_instance_trader.py`
 - **Logic**: Independent conviction-drop exit tracking, dynamic lot sizing, and multi-symbol order management through a single MT5 connection.
 
+### 5. API Command Center (`api_server.py`) [NEW] ⭐
+The master entry point for the entire system. Provides a web-based UI to manage your platform.
+- **Run**: `py -3.11 api_server.py`
+- **Interface**: Open `http://localhost:8000` in your browser.
+- **Features**: Remote Start/Stop traders, trigger retraining, and monitor MT5 health.
+- **Documentation**: Swagger UI at `http://localhost:8000/docs`.
+
 ---
 
 ## 🏗️ Project Structure
