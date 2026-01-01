@@ -292,7 +292,7 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Evaluate PPO trading agent')
-    parser.add_argument('--model', type=str, default='models/xauusd_m5_ppo_final',
+    parser.add_argument('--model', type=str, default='models/xauusd/experts/xauusd_m5_ppo_expert',
                         help='Path to trained model')
     parser.add_argument('--data', type=str, default='data/xauusd_m5.csv',
                         help='Path to test data')

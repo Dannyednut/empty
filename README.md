@@ -1,318 +1,104 @@
-# PPO Trading Agent - Enhanced Version
-
-Advanced reinforcement learning trading agent using Proximal Policy Optimization (PPO) for XAU/USD (Gold) trading.
-
-## 🎯 Features
-
-### Enhanced v3 Implementation
-- ✅ **35+ Technical Indicators** - Comprehensive feature engineering
-- ✅ **Multi-Timeframe Analysis** - 5M, 15M, 30M context
-- ✅ **Continuous Action Space** - Position sizing (0-100%)
-- ✅ **Risk Management** - Stop-loss, take-profit, drawdown limits
-- ✅ **Risk-Adjusted Rewards** - Sharpe ratio optimization
-- ✅ **GPU Acceleration** - CUDA support for faster training
-- ✅ **TensorBoard Logging** - Real-time training monitoring
-- ✅ **Model Checkpointing** - Save best models automatically
-- ✅ **Comprehensive Metrics** - 15+ performance indicators
-- ✅ **Professional Visualizations** - Equity curves, drawdowns, trade analysis
-
-## 📊 Performance Targets
-
-| Metric | Target | Description |
-|--------|--------|-------------|
-| **Sharpe Ratio** | > 2.0 | Excellent risk-adjusted returns |
-| **Max Drawdown** | < 15% | Controlled risk exposure |
-| **Win Rate** | > 55% | More winners than losers |
-| **Profit Factor** | > 2.0 | Wins 2x larger than losses |
-
-## 🚀 Quick Start
-
-### 1. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-**Note:** For GPU support, ensure you have CUDA installed. Check compatibility:
-```bash
-python -c "import torch; print(f'CUDA Available: {torch.cuda.is_available()}')"
-```
-
-### 2. Fetch Data (if needed)
-
-```bash
-python data/fetch_mt5.py
-```
-
-This will download 50,000 bars of XAU/USD 5M data from MetaTrader 5.
-
-### 3. Train the Model
-
-```bash
-python train_v3.py
-```
-
-**Training Configuration:**
-- Symbol: XAU/USD
-- Timeframe: 5M
-- Total timesteps: 500,000 (adjust as needed)
-- GPU: Automatically detected
-- Logs: `logs/` directory
-- Models: `models/` directory
-
-**Monitor Training:**
-```bash
-tensorboard --logdir logs/
-```
-Then open http://localhost:6006 in your browser.
-
-### 4. Evaluate the Model
-
-```bash
-# Single evaluation
-python evaluate_v3.py --model models/xauusd_m5_ppo_final.zip --data data/xauusd_m5.csv
-
-# Cross-timeframe evaluation
-python evaluate_v3.py --model models/xauusd_m5_ppo_final.zip --cross-tf
-```
-
-Results will be saved to `results/` directory with:
-- Performance metrics (CSV)
-- Equity curves (PNG)
-- Trade distribution (PNG)
-- Rolling Sharpe ratio (PNG)
-- Action distribution (PNG)
-- Strategy comparison (PNG)
-
-## 📁 Project Structure
-
-```
-PPO_trader/
-├── data/
-│   ├── fetch_mt5.py          # Data fetching from MT5
-│   ├── eurusd_m5.csv          # EUR/USD 5M data
-│   └── xauusd_m5.csv          # XAU/USD 5M data
-│
-├── features/
-│   ├── indicators.py          # Original indicators (v1)
-│   └── indicators_v2.py       # Enhanced indicators (35+ features)
-│
-├── env/
-│   ├── trading_env.py         # Original environment (v1)
-│   ├── trading_env_v2.py      # Improved environment (v2)
-│   └── trading_env_v3.py      # Advanced environment (v3) ⭐
-│
-├── evaluation/
-│   ├── metrics.py             # Performance metrics
-│   └── visualizations.py      # Plotting utilities
-│
-├── models/                    # Saved models
-├── logs/                      # TensorBoard logs
-├── results/                   # Evaluation results
-│
-├── train.py                   # Original training (v1)
-├── train_v3.py                # Enhanced training (v3) ⭐
-├── evaluate.py                # Original evaluation (v1)
-├── evaluate_v3.py             # Enhanced evaluation (v3) ⭐
-│
-└── requirements.txt           # Dependencies
-```
-
-## 🔧 Technical Details
-
-### Feature Engineering (indicators_v2.py)
-
-**Trend Indicators:**
-- RSI (14), MACD, ADX (14)
-- Bollinger Bands (20, 2σ)
-- SMMA (9), TEMA (14)
-
-**Momentum Indicators:**
-- Stochastic Oscillator (14, 3)
-- Rate of Change (10)
-- Momentum (10)
-
-**Volatility Indicators:**
-- ATR (14)
-- Historical Volatility (20)
-- Bollinger Band Width
-
-**Volume Indicators:**
-- Volume MA (20)
-- Volume Ratio
-- On-Balance Volume (OBV)
-
-**Multi-Timeframe:**
-- 15M RSI, Trend
-- 30M Trend
-
-**Time Features:**
-- Hour (sin/cos encoding)
-- Day of week (sin/cos encoding)
-- Market session (Asian/European/US)
-
-**Market Regime:**
-- Trending vs Ranging
-- High vs Low Volatility
-
-### Trading Environment (trading_env_v3.py)
-
-**Action Space:**
-- Continuous: [-1.0, 1.0]
-- -1.0 = 100% short
-- 0.0 = Flat (no position)
-- +1.0 = 100% long
-
-**Observation Space:**
-- 35+ technical features
-- Current position
-- Unrealized PnL
-- Current drawdown
-
-**Risk Management:**
-- Stop-loss: 2%
-- Take-profit: 4%
-- Max drawdown limit: 20%
-- Transaction cost: 0.02%
-
-**Reward Function:**
-```python
-reward = step_return * 100
-       + sharpe_bonus * 0.01
-       - drawdown_penalty * 0.1
-       + win_rate_bonus * 0.01
-```
-
-### Model Architecture
-
-**PPO Hyperparameters:**
-- Policy: MlpPolicy (3 layers)
-- Learning rate: 3e-4
-- Steps per rollout: 2048
-- Batch size: 64
-- Epochs per update: 10
-- Entropy coefficient: 0.01 (exploration)
-- Clip range: 0.2
-
-## 📈 Results Comparison
-
-### Original Model (v1)
-- Features: 4
-- Action: Discrete (Hold/Buy/Sell)
-- XAU/USD 5M PnL: +$251 (2.5%)
-- No risk management
-
-### Enhanced Model (v3)
-- Features: 35+
-- Action: Continuous (position sizing)
-- Risk management: ✅
-- Target Sharpe: > 2.0
-- Target Drawdown: < 15%
-
-## 🎓 Training Tips
-
-### For Better Performance:
-
-1. **Increase Training Time**
-   ```python
-   total_timesteps=1_000_000  # Instead of 500k
-   ```
-
-2. **Adjust Entropy Coefficient**
-   ```python
-   ent_coef=0.02  # More exploration
-   ```
-
-3. **Tune Reward Scaling**
-   ```python
-   reward_scaling=200.0  # Stronger signals
-   ```
-
-4. **Use Learning Rate Schedule**
-   ```python
-   learning_rate=lambda progress: 3e-4 * (1 - progress)
-   ```
-
-### Hyperparameter Optimization
-
-For automated tuning, use Optuna:
-```python
-# TODO: Implement hyperparameter optimization script
-```
-
-## 🔍 Monitoring Training
-
-### TensorBoard Metrics
-
-**Rollout:**
-- `ep_len_mean` - Average episode length
-- `ep_rew_mean` - Average episode reward
-
-**Training:**
-- `approx_kl` - KL divergence (should be small)
-- `clip_fraction` - Fraction of clipped updates
-- `entropy_loss` - Exploration level
-- `explained_variance` - Value function quality
-- `policy_gradient_loss` - Policy improvement
-- `value_loss` - Value function error
-
-**Custom Metrics:**
-- `eval/sharpe_ratio` - Validation Sharpe
-- `eval/max_drawdown` - Validation drawdown
-- `eval/win_rate` - Validation win rate
-- `eval/profit_factor` - Validation profit factor
-
-### Good Training Signs:
-✅ `ep_rew_mean` increasing
-✅ `explained_variance` > 0.5
-✅ `entropy_loss` gradually decreasing
-✅ `eval/sharpe_ratio` > 1.0
-
-### Bad Training Signs:
-❌ `ep_rew_mean` negative or decreasing
-❌ `explained_variance` negative
-❌ `approx_kl` > 0.1 (too aggressive updates)
-❌ `eval/sharpe_ratio` < 0
-
-## 🐛 Troubleshooting
-
-### CUDA Out of Memory
-```python
-# Reduce batch size
-batch_size=32  # Instead of 64
-```
-
-### Training Too Slow
-```python
-# Reduce n_steps
-n_steps=1024  # Instead of 2048
-```
-
-### Poor Performance
-1. Check feature quality (NaN values)
-2. Verify data quality (outliers, gaps)
-3. Increase training time
-4. Adjust reward function
-5. Try different hyperparameters
-
-## 📚 References
-
-- [Stable-Baselines3 Documentation](https://stable-baselines3.readthedocs.io/)
-- [PPO Paper](https://arxiv.org/abs/1707.06347)
-- [Gymnasium Documentation](https://gymnasium.farama.org/)
-
-## ⚠️ Disclaimer
-
-This is a research/educational project. **DO NOT use this for live trading without extensive testing and validation.** Past performance does not guarantee future results. Trading involves substantial risk of loss.
-
-## 📝 License
-
-MIT License - See LICENSE file for details
-
-## 🤝 Contributing
-
-Contributions welcome! Please open an issue or submit a pull request.
+# 🎯 PPO Sniper - Institutional Trading Suite
+
+Advanced reinforcement learning trading suite using Proximal Policy Optimization (PPO). This platform has evolved from a research project into a fully automated, multi-asset institutional trading system.
+
+## 🚀 The Sniper Ecosystem
+
+This suite consists of four specialized layers designed for high-performance trading of Gold (XAUUSD), Silver (XAGUSD), and Oil (WTI).
+
+### 1. Performance Dashboard (`dashboard.py`)
+Generates a stunning, interactive HTML report of your live trading history.
+- **Run**: `py -3.11 dashboard.py`
+- **Output**: Open `results/live_dashboard.html` in any browser.
+- **Metrics**: Real-time Win Rate, Profit Factor, and Max Drawdown tracking.
+
+### 2. Auto-Retraining Pipeline (`retrain_pipeline.py`)
+Features the **"Champion vs. Challenger"** validation system to prevent model decay.
+- **Run**: `py -3.11 retrain_pipeline.py`
+- **Logic**: Automatically fetches last 30 days of data -> Hides latest 5 days (Hold-out set) -> Fine-tunes PPO -> Only promotes the new model if it outperforms the current live version on unseen data.
+
+### 3. Universal Expert Trainer (`universal_trainer.py`)
+Master any market by training a specialized brain for that specific asset.
+- **Run**: `py -3.11 universal_trainer.py [SYMBOL] [STEPS]`
+- **Example**: `py -3.11 universal_trainer.py XAGUSD 500000`
+- **Result**: Creates an expert model in `models/[symbol]/experts/`.
+
+### 4. Multi-Instance Manager (`multi_instance_trader.py`)
+The ultimate execution bridge that manages multiple experts simultaneously.
+- **Run**: `py -3.11 multi_instance_trader.py`
+- **Logic**: Independent conviction-drop exit tracking, dynamic lot sizing, and multi-symbol order management through a single MT5 connection.
 
 ---
 
-**Built with ❤️ for algorithmic trading research**
+## 🏗️ Project Structure
+
+```
+PPO_trader/
+├── models/                    # 🧠 Brains & Stats
+│   └── [symbol]/              # e.g., xauusd/
+│       ├── experts/           # Production models
+│       ├── checkpoints/       # Training snapshots
+│       └── backups/           # Replaced versions
+│
+├── data/                      # 📊 Raw Market Data
+├── features/                  # 🛠️ 35+ Indicator Engineering
+├── env/                       # 🌍 Advanced Gymnasium Environments
+├── evaluation/                # ⚖️ Backtesting & Metrics
+├── logs/                      # 📈 TensorBoard & Live CSV Logs
+├── results/                   # 🖼️ Dashboards & PNG Reports
+│
+├── live_trader_mt5_v2.py      # Single-asset Gold Live Trader
+├── multi_instance_trader.py   # Multi-asset Execution Manager
+├── retrain_pipeline.py        # Automated Maintenance
+├── universal_trainer.py       # Specialist Training 
+└── dashboard.py               # Performance Visualization 
+```
+
+---
+
+## 🔧 Technical Core
+
+### Feature Engineering (`indicators_v2.py`)
+Over **35 technical features** providing a deep market context:
+- **Momentum**: RSI, MACD, ADX, Stochastic.
+- **Volatility**: ATR, Historical Volatility, BB Width.
+- **Trend**: SMMA, TEMA, Multi-timeframe RSI (15M/30M).
+- **Context**: Market Sessions (Asian/London/NY), Hour/Day Sin/Cos encoding.
+
+### High-Frequency Env (`trading_env_v3.py`)
+- **Continuous Action Space**: Precise position sizing from -100% to +100%.
+- **Net Accounting**: Robust cash/share tracking to prevent numerical instability.
+- **Safety**: 0.5% Hard Stop-Loss and 1.5% Take-Profit by default.
+
+---
+
+## 📈 Strategic Workflow
+
+1. **Research**: Train a new expert using `universal_trainer.py`.
+2. **Deploy**: Add the model path to `ASSETS` in `multi_instance_trader.py`.
+3. **Analyze**: Run `dashboard.py` weekly to review the equity curve and drawdown.
+4. **Maintain**: Run `retrain_pipeline.py` monthly to adapt the model to current market conditions.
+
+---
+
+## 🎓 Training Signs
+
+**Good Signs:**
+✅ `ep_rew_mean` increasing over time.
+✅ `explained_variance` > 0.5 (Value function understands the market).
+✅ `eval/sharpe_ratio` > 1.5 during retraining duels.
+
+**Bad Signs:**
+❌ `approx_kl` > 0.05 (Updates are too aggressive, reducing LR).
+❌ `entropy_loss` flatlining too early (The model stopped exploring patterns).
+
+---
+
+## ⚠️ Disclaimer
+
+This is a professional algorithmic trading suite. 
+**Past performance does not guarantee future results.** 
+Always verify in **Demo Mode** (`DRY_RUN = True`) before risking real capital. The authors are not responsible for financial losses incurred.
+
+---
+**Built with ❤️ for High-Alpha Algorithmic Trading**

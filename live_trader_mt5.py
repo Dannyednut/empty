@@ -24,8 +24,8 @@ from features.indicators_v2 import build_features, get_feature_columns
 SYMBOL = "XAUUSD"
 TIMEFRAME = mt5.TIMEFRAME_M5
 BASE_TIMEFRAME_STR = '5min'
-MODEL_PATH = "models/xauusd_m5_ppo_final.zip"
-STATS_PATH = "models/xauusd_m5_ppo_final_vec_normalize.pkl"
+MODEL_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert.zip"
+STATS_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert_vec_normalize.pkl"
 
 # Risk Management
 MAX_RISK_PER_TRADE = 0.02  # 2% of equity
