@@ -249,25 +249,23 @@ def build_features(df: pd.DataFrame, base_timeframe: str = '5min') -> pd.DataFra
     df['is_doji'] = (df['candle_body_ratio'] < 0.1).astype(float)
     
     # ============================================
-    # 7. MULTI-TIMEFRAME FEATURES
+    # 7. MULTI-TIMEFRAME FEATURES (Robust Implementation)
     # ============================================
-    # Resample to 15min and 30min for higher timeframe context
+    # Ensure columns exist for all base timeframes to prevent model mismatch
+    
     if base_timeframe == '5min':
-        # 15min features
+        # Standard: Resample 5m to 15m and 30m
         df_15m = resample_to_higher_timeframe(df[['time', 'open', 'high', 'low', 'close', 'tick_volume']], '15min')
         df_15m['rsi_15m'] = calculate_rsi(df_15m['close'], period=14)
         df_15m['ema_15m'] = df_15m['close'].ewm(span=20, adjust=False).mean()
         df_15m['trend_15m'] = (df_15m['close'] > df_15m['ema_15m']).astype(float)
         
-        # Merge back to 5min data
         df = pd.merge_asof(
             df.sort_values('time'),
             df_15m[['time', 'rsi_15m', 'trend_15m']].sort_values('time'),
-            on='time',
-            direction='backward'
+            on='time', direction='backward'
         )
         
-        # 30min features
         df_30m = resample_to_higher_timeframe(df[['time', 'open', 'high', 'low', 'close', 'tick_volume']], '30min')
         df_30m['ema_30m'] = df_30m['close'].ewm(span=20, adjust=False).mean()
         df_30m['trend_30m'] = (df_30m['close'] > df_30m['ema_30m']).astype(float)
@@ -275,9 +273,38 @@ def build_features(df: pd.DataFrame, base_timeframe: str = '5min') -> pd.DataFra
         df = pd.merge_asof(
             df.sort_values('time'),
             df_30m[['time', 'trend_30m']].sort_values('time'),
-            on='time',
-            direction='backward'
+            on='time', direction='backward'
         )
+    
+    elif base_timeframe == '15min':
+        # Data is already 15m
+        df['rsi_15m'] = df['rsi']
+        ema_15m = df['close'].ewm(span=20, adjust=False).mean()
+        df['trend_15m'] = (df['close'] > ema_15m).astype(float)
+        
+        # Resample 15m to 30m
+        df_30m = resample_to_higher_timeframe(df[['time', 'open', 'high', 'low', 'close', 'tick_volume']], '30min')
+        df_30m['ema_30m'] = df_30m['close'].ewm(span=20, adjust=False).mean()
+        df_30m['trend_30m'] = (df_30m['close'] > df_30m['ema_30m']).astype(float)
+        
+        df = pd.merge_asof(
+            df.sort_values('time'),
+            df_30m[['time', 'trend_30m']].sort_values('time'),
+            on='time', direction='backward'
+        )
+        
+    elif base_timeframe == '30min':
+        # Data is already 30m
+        df['rsi_15m'] = df['rsi']
+        ema_30m = df['close'].ewm(span=20, adjust=False).mean()
+        df['trend_15m'] = (df['close'] > ema_30m).astype(float)
+        df['trend_30m'] = df['trend_15m']
+    
+    else:
+        # Fallback for other timeframes
+        df['rsi_15m'] = df['rsi']
+        df['trend_15m'] = 0.0
+        df['trend_30m'] = 0.0
     
     # ============================================
     # 8. TIME-BASED FEATURES

@@ -51,17 +51,6 @@ def evaluate_model(
     print(f"\n🤖 Loading model: {model_path}")
     model = PPO.load(model_path)
     
-    # Load normalization stats if they exist
-    vec_normalize_path = model_path.replace(".zip", "") + "_vec_normalize.pkl"
-    vec_normalize = None
-    if os.path.exists(vec_normalize_path):
-        print(f"   📈 Loading normalization stats: {vec_normalize_path}")
-        # We need a dummy env to load VecNormalize
-        dummy_env = DummyVecEnv([lambda: None])
-        vec_normalize = VecNormalize.load(vec_normalize_path, dummy_env)
-        vec_normalize.training = False  # Don't update stats during eval
-        vec_normalize.norm_reward = False  # Don't normalize rewards during eval
-    
     # Load and prepare data
     print(f"\n📊 Loading data: {data_path}")
     df = pd.read_csv(data_path)
@@ -94,6 +83,31 @@ def evaluate_model(
         max_drawdown_limit=0.50,  # Allow full evaluation without circuit breaker if possible
         reward_scaling=1.0  # Use new scaling
     )
+    
+    # Wrap in DummyVecEnv so we can apply normalization
+    venv = DummyVecEnv([lambda: env])
+    
+    # Load normalization stats if they exist
+    # Robustly handle .zip in model_path
+    base_model_path = model_path[:-4] if model_path.endswith('.zip') else model_path
+    vec_normalize_path = base_model_path + "_vec_normalize.pkl"
+    
+    vec_normalize = None
+    if os.path.exists(vec_normalize_path):
+        print(f"   📈 Loading normalization stats: {vec_normalize_path}")
+        vec_normalize = VecNormalize.load(vec_normalize_path, venv)
+        vec_normalize.training = False  # Don't update stats during eval
+        vec_normalize.norm_reward = False  # Don't normalize rewards during eval
+    else:
+        print(f"   ⚠️  No normalization stats found at {vec_normalize_path}. Observations will be raw.")
+    
+    # Check feature consistency
+    expected_n_features = model.observation_space.shape[0] - 3  # env adds 3 portfolio features
+    actual_n_features = len(feature_columns)
+    if expected_n_features != actual_n_features:
+        print(f"\n❌ Feature mismatch! Model expects {expected_n_features} features, but got {actual_n_features}.")
+        print(f"   Check your get_feature_columns() and build_features() output.")
+        # But try to proceed if possible or exit
     
     # Run evaluation
     print(f"\n🚀 Running evaluation...")
