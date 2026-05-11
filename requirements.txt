@@ -1,7 +1,7 @@
 # Core dependencies
 MetaTrader5
 pandas
-numpy
+numpy<2.0
 
 # Reinforcement Learning
 gymnasium

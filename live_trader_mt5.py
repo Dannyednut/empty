@@ -21,19 +21,32 @@ from features.indicators_v2 import build_features, get_feature_columns
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
-SYMBOL = "XAUUSD"
-TIMEFRAME = mt5.TIMEFRAME_M5
-BASE_TIMEFRAME_STR = '5min'
-MODEL_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert.zip"
-STATS_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert_vec_normalize.pkl"
+import argparse
+
+# Parse command line arguments to override defaults
+parser = argparse.ArgumentParser(description="PPO Trading Agent - Live MT5 Execution Bridge")
+parser.add_argument("--symbol", type=str, default="XAUUSD", help="Trading symbol (e.g., XAUUSD)")
+parser.add_argument("--tf", type=str, default="M5", choices=["M1", "M5", "M15", "M30", "H1"], help="Timeframe")
+parser.add_argument("--risk", type=float, default=0.02, help="Risk per trade (0.01-1.0)")
+parser.add_argument("--lots", type=float, default=0.01, help="Lot size (fixed)")
+parser.add_argument("--sl_pips", type=int, default=50, help="Stop loss in pips")
+parser.add_argument("--dry_run", type=bool, default=False, help="Dry run mode")
+
+args = parser.parse_args()
+
+SYMBOL = args.symbol
+TIMEFRAME = getattr(mt5, f"TIMEFRAME_{args.tf.upper()}")
+BASE_TIMEFRAME_STR = '5min' if args.tf.upper() == 'M5' else '15min' if args.tf.upper() == 'M15' else '30min'
+MODEL_PATH = f"models/{args.symbol.lower()}/experts/{args.symbol.lower()}_{args.tf.lower()}_ppo_expert.zip"
+STATS_PATH = f"models/{args.symbol.lower()}/experts/{args.symbol.lower()}_{args.tf.lower()}_ppo_expert_vec_normalize.pkl"
 
 # Risk Management
-MAX_RISK_PER_TRADE = 0.02  # 2% of equity
-LOT_SIZE_FIXED = 0.01      # Use fixed lots if risk calculation fails
-MAX_SL_PIPS = 50           # Safeguard SL
+MAX_RISK_PER_TRADE = args.risk  # 2% of equity
+LOT_SIZE_FIXED = args.lots      # Use fixed lots if risk calculation fails
+MAX_SL_PIPS = args.sl_pips           # Safeguard SL
 
 # Operational Settings
-DRY_RUN = False  # Set to False for real execution
+DRY_RUN = args.dry_run  # Set to False for real execution
 POLLING_INTERVAL = 1  # Seconds between checks for new candle
 MAGIC_NUMBER = 20241231  # Unique ID for this bot's orders
 COMMENT = "PPO_Sniper_V3"

@@ -20,7 +20,8 @@ def check_dependencies():
         'torch': 'Deep learning (GPU support)',
         'matplotlib': 'Plotting',
         'seaborn': 'Statistical visualization',
-        'ta': 'Technical analysis (optional)'
+        'fastapi': 'Command Center API',
+        'uvicorn': 'API Server'
     }
     
     missing = []
@@ -38,7 +39,15 @@ def check_dependencies():
         print(f"\nInstall with: pip install {' '.join(missing)}")
         return False
     else:
+        import numpy as np
+        v = np.__version__
         print(f"\nAll dependencies installed!")
+        if int(v.split('.')[0]) >= 2:
+            print(f"⚠️  WARNING: NumPy {v} detected. MetaTrader5 requires numpy < 2.0.0.")
+            print(f"   Run: pip install \"numpy<2\"")
+            return False
+        else:
+            print(f"✅ NumPy version {v} is compatible.")
         return True
 
 
@@ -164,6 +173,52 @@ def test_environment():
         return False
 
 
+def test_sniper_v4():
+    """Test Sniper V4 environment"""
+    print("\n" + "=" * 80)
+    print("TESTING SNIPER V4 ENVIRONMENT")
+    print("=" * 80)
+    
+    try:
+        import pandas as pd
+        from env.trading_env_v4 import SniperTradingEnv
+        from features.indicators_v2 import build_features, get_feature_columns
+        
+        # Load and prepare data
+        df = pd.read_csv("data/xauusd_m5.csv")
+        df = build_features(df.head(1000), base_timeframe='5min')
+        feature_cols = get_feature_columns()
+        feature_cols = [col for col in feature_cols if col in df.columns]
+        
+        # Create environment
+        env = SniperTradingEnv(
+            df=df,
+            feature_columns=feature_cols,
+            initial_cash=10_000
+        )
+        
+        print(f"   Observation space: {env.observation_space.shape}")
+        print(f"   Action space: {env.action_space.shape}")
+        
+        # Test reset
+        obs, info = env.reset()
+        print(f"   Reset successful: obs shape = {obs.shape}")
+        
+        # Test 2D action
+        action = np.array([0.5, 1.5], dtype=np.float32) # Buy 50% conviction, 1.5x ATR
+        obs, reward, done, info = env.step(action)
+        
+        print(f"   Step successful: action={action}")
+        print(f"   Portfolio: ${info['portfolio_value']:,.2f}")
+        
+        print(f"\nSniper V4 environment working correctly!")
+        return True
+        
+    except Exception as e:
+        print(f"Error testing Sniper V4: {e}")
+        return False
+
+
 def test_metrics():
     """Test metrics calculation"""
     print("\n" + "=" * 80)
@@ -225,6 +280,7 @@ def main():
     if results['dependencies']:
         results['features'] = test_features()
         results['environment'] = test_environment()
+        results['sniper_v4'] = test_sniper_v4()
         results['metrics'] = test_metrics()
     
     # Summary
@@ -237,11 +293,11 @@ def main():
         print(f"{component.capitalize():<20} {status_str}")
     
     if all(results.values()):
-        print("\nAll tests passed! You're ready to train!")
+        print("\nAll tests passed! You're ready to engage!")
         print("\nNext steps:")
-        print("1. Ensure you have data: python data/fetch_mt5.py")
-        print("2. Train model: python train_v3.py")
-        print("3. Evaluate: python evaluate_v3.py")
+        print("1. Launch Command Center: py -3.9 api_server_v2.py")
+        print("2. Open Browser: http://localhost:8000")
+        print("3. Enter The Forge to train your first Sniper.")
     else:
         print("\nSome tests failed. Please fix the issues above.")
         if not results['dependencies']:

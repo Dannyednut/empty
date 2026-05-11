@@ -307,32 +307,32 @@ def print_metrics_report(metrics: Dict[str, float], title: str = "Performance Me
     
     assessments = []
     if metrics['sharpe_ratio'] > 2.0:
-        assessments.append("✓ Excellent Sharpe Ratio (>2.0)")
+        assessments.append("Excellent Sharpe Ratio (>2.0)")
     elif metrics['sharpe_ratio'] > 1.0:
-        assessments.append("✓ Good Sharpe Ratio (>1.0)")
+        assessments.append("Good Sharpe Ratio (>1.0)")
     else:
-        assessments.append("✗ Poor Sharpe Ratio (<1.0)")
+        assessments.append("Poor Sharpe Ratio (<1.0)")
     
     if abs(metrics['max_drawdown']) < 0.15:
-        assessments.append("✓ Low Drawdown (<15%)")
+        assessments.append("Low Drawdown (<15%)")
     elif abs(metrics['max_drawdown']) < 0.25:
-        assessments.append("~ Moderate Drawdown (15-25%)")
+        assessments.append("Moderate Drawdown (15-25%)")
     else:
-        assessments.append("✗ High Drawdown (>25%)")
+        assessments.append("High Drawdown (>25%)")
     
     if metrics['win_rate'] > 0.55:
-        assessments.append("✓ Good Win Rate (>55%)")
+        assessments.append("Good Win Rate (>55%)")
     elif metrics['win_rate'] > 0.45:
-        assessments.append("~ Moderate Win Rate (45-55%)")
+        assessments.append("Moderate Win Rate (45-55%)")
     else:
-        assessments.append("✗ Low Win Rate (<45%)")
+        assessments.append("Low Win Rate (<45%)")
     
     if metrics['profit_factor'] > 2.0:
-        assessments.append("✓ Excellent Profit Factor (>2.0)")
+        assessments.append("Excellent Profit Factor (>2.0)")
     elif metrics['profit_factor'] > 1.5:
-        assessments.append("✓ Good Profit Factor (>1.5)")
+        assessments.append("Good Profit Factor (>1.5)")
     else:
-        assessments.append("✗ Poor Profit Factor (<1.5)")
+        assessments.append("Poor Profit Factor (<1.5)")
     
     for assessment in assessments:
         print(assessment)

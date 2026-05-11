@@ -21,6 +21,7 @@ import sys
 # Add project root to path
 sys.path.append('.')
 
+from data.fetch_mt5 import fetch_data
 from env.trading_env_v3 import AdvancedTradingEnv
 from features.indicators_v2 import build_features, get_feature_columns
 from evaluation.metrics import calculate_all_metrics, print_metrics_report
@@ -84,7 +85,7 @@ class MetricsCallback(BaseCallback):
                 self.best_sharpe = metrics['sharpe_ratio']
                 self.model.save(f"models/best_model_sharpe_{metrics['sharpe_ratio']:.2f}")
                 if self.verbose > 0:
-                    print(f"\n🎯 New best Sharpe ratio: {metrics['sharpe_ratio']:.2f}")
+                    print(f"\n New best Sharpe ratio: {metrics['sharpe_ratio']:.2f}")
         
         return True
 
@@ -156,23 +157,23 @@ def train_ppo_agent(
     
     # Check GPU availability
     device = 'cuda' if use_gpu and torch.cuda.is_available() else 'cpu'
-    print(f"\n🖥️  Device: {device.upper()}")
+    print(f"\n  Device: {device.upper()}")
     if device == 'cuda':
         print(f"   GPU: {torch.cuda.get_device_name(0)}")
         print(f"   Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
     
     # Load data
-    print(f"\n📊 Loading {symbol.upper()} {timeframe.upper()} data...")
+    print(f"\n Loading {symbol.upper()} {timeframe.upper()} data...")
     data_file = f"data/{symbol}_{timeframe}.csv"
     
     if not os.path.exists(data_file):
-        raise FileNotFoundError(f"Data file not found: {data_file}")
+        fetch_data(symbol, timeframe)
     
     df = pd.read_csv(data_file)
     print(f"   Raw data shape: {df.shape}")
     
     # Build features
-    print(f"\n🔧 Building features...")
+    print(f"\n Building features...")
     base_tf = '5min' if 'm5' in timeframe else '15min' if 'm15' in timeframe else '30min'
     df = build_features(df, base_timeframe=base_tf)
     feature_columns = get_feature_columns()
@@ -187,12 +188,12 @@ def train_ppo_agent(
     train_df = df.iloc[:split_idx].reset_index(drop=True)
     val_df = df.iloc[split_idx:].reset_index(drop=True)
     
-    print(f"\n📈 Data split:")
+    print(f"\n Data split:")
     print(f"   Training: {len(train_df)} samples")
     print(f"   Validation: {len(val_df)} samples")
     
     # Create environments
-    print(f"\n🏗️  Creating environments...")
+    print(f"\n  Creating environments...")
     # Training env
     raw_train_env = create_env(train_df, feature_columns, episode_length=2000)
     train_env = Monitor(raw_train_env)
@@ -209,7 +210,7 @@ def train_ppo_agent(
     print(f"   Action space: {raw_train_env.action_space.shape}")
     
     # Create model
-    print(f"\n🤖 Creating PPO model...")
+    print(f"\n Creating PPO model...")
     print(f"   Learning rate: {learning_rate}")
     print(f"   Steps per rollout: {n_steps}")
     print(f"   Batch size: {batch_size}")
@@ -221,7 +222,7 @@ def train_ppo_agent(
         import tensorboard
         use_tensorboard = False #True
     except ImportError:
-        print(f"   ⚠️  TensorBoard not installed. Training will proceed without logging.")
+        print(f"   TensorBoard not installed. Training will proceed without logging.")
         print(f"   Install with: pip install tensorboard")
         use_tensorboard = False
     
@@ -251,7 +252,7 @@ def train_ppo_agent(
     )
     
     # Setup callbacks
-    print(f"\n⚙️  Setting up callbacks...")
+    print(f"\n  Setting up callbacks...")
     
     # Checkpoint callback - save every 50k steps
     checkpoint_callback = CheckpointCallback(
@@ -274,7 +275,7 @@ def train_ppo_agent(
     callbacks = [checkpoint_callback, metrics_callback, tensorboard_callback]
     
     # Train model
-    print(f"\n🚀 Starting training...")
+    print(f"\nStarting training...")
     print(f"   Total timesteps: {total_timesteps:,}")
     print(f"   Estimated time: {total_timesteps / (n_steps * 10):.0f} minutes")
     print(f"\n   Monitor training: tensorboard --logdir {log_dir}")
@@ -287,18 +288,18 @@ def train_ppo_agent(
             progress_bar=True
         )
     except KeyboardInterrupt:
-        print("\n\n⚠️  Training interrupted by user")
+        print("\n\nTraining interrupted by user")
     
     # Save final model
-    final_model_base = f"{save_dir}/{symbol}_{timeframe}_ppo_final"
+    final_model_base = f"{save_dir}/{symbol}_{timeframe}_ppo_v3_expert"
     model.save(final_model_base)
     # Save normalization stats
-    train_env.save(f"{final_model_base}_vec_normalize.pkl")
-    print(f"\n✅ Final model saved: {final_model_base}")
-    print(f"✅ Normalization stats saved: {final_model_base}_vec_normalize.pkl")
+    train_env.save(f"{final_model_base}_v3_vec_normalize.pkl")
+    print(f"\nFinal model saved: {final_model_base}")
+    print(f"Normalization stats saved: {final_model_base}_v3_vec_normalize.pkl")
     
     # Final evaluation
-    print(f"\n📊 Final Evaluation on Validation Set...")
+    print(f"\nFinal Evaluation on Validation Set...")
     print("=" * 80)
     
     obs = raw_val_env.reset()[0]
@@ -318,7 +319,7 @@ def train_ppo_agent(
     metrics_df = pd.DataFrame([metrics])
     metrics_df.to_csv(f"{save_dir}/{symbol}_{timeframe}_metrics.csv", index=False)
     
-    print(f"\n✅ Training complete!")
+    print(f"\nTraining complete!")
     print(f"   Model: {final_model_path}.zip")
     print(f"   Metrics: {save_dir}/{symbol}_{timeframe}_metrics.csv")
     print("=" * 80)
@@ -328,12 +329,19 @@ def train_ppo_agent(
 
 if __name__ == "__main__":
     # Train on XAU/USD 5M data
-    print("\n🎯 Training PPO Agent for XAU/USD (Gold) Trading\n")
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--symbol", type=str, default="xauusd")
+    parser.add_argument("--timeframe", type=str, default="m5")
+    parser.add_argument("--steps", type=int, default=1_000_000)
+    args = parser.parse_args()
+    
+    print("\nTraining PPO Agent for XAU/USD (Gold) Trading\n")
     
     model, metrics = train_ppo_agent(
-        symbol="xauusd",
-        timeframe="m5",
-        total_timesteps=1_000_000,  # Increased for deeper patterns
+        symbol=args.symbol,
+        timeframe=args.timeframe,
+        total_timesteps=args.steps,  # Increased for deeper patterns
         learning_rate=5e-5,        # Stabilized for larger network
         n_steps=8192,               # Larger rollouts for better variance estimate
         batch_size=256,             # Larger batches for stable gradients
@@ -358,13 +366,13 @@ if __name__ == "__main__":
     }
     
     for criterion, passed in criteria.items():
-        status = "✅ PASS" if passed else "❌ FAIL"
+        status = "PASS" if passed else "❌ FAIL"
         print(f"{criterion}: {status}")
     
     if all(criteria.values()):
-        print("\n🎉 ALL CRITERIA MET! Model is production-ready!")
+        print("\n ALL CRITERIA MET! Model is production-ready!")
     else:
-        print("\n⚠️  Some criteria not met. Consider:")
+        print("\n Some criteria not met. Consider:")
         print("   - Increasing total_timesteps")
         print("   - Tuning hyperparameters")
         print("   - Adding more features")

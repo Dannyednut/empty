@@ -1,127 +1,93 @@
-# 🎯 PPO Sniper - Institutional Trading Suite
+# PPO Sniper - Institutional Trading Ecosystem
 
-Advanced reinforcement learning trading suite using Proximal Policy Optimization (PPO). This platform has evolved from a research project into a fully automated, multi-asset institutional trading system.
+Advanced reinforcement learning trading suite using Proximal Policy Optimization (PPO). This platform features a dual-engine architecture (**Sniper V4** for Scalping and **Expert V3** for Sessioned Trading), managed through a unified, high-performance web dashboard.
 
-## 🚀 Professional Workflow
-1. **Brain Training**: Use `universal_trainer.py` to master Gold (XAUUSD), Silver (XAGUSD), or Oil (WTI).
-2. **Maintenance**: `retrain_pipeline.py` maintains alpha through "Champion vs Challenger" logic.
-3. **Control**: Manage everything via the FastAPI Command Center (`api_server.py`).
-4. **Deploy**: 
-   - **Local**: Run `multi_instance_trader.py` for Python-based orchestration.
-   - **Native**: Export via `export_onnx.py` and run inside MT5 with `ppo_sniper_native.mq5`.
+## Key Evolutionary Features (v2.2)
+- **Dual-Model Architecture**: Switch between high-frequency Sniper (Adaptive ATR) and traditional Expert models.
+- **PPO Command Center**: Glassmorphism web dashboard for Training, Evaluation, and Live Fleet management.
+- **Adaptive Sniper Engine**: Sniper V4 uses a 2D action space (Direction + Volatility Multiplier) for dynamic SL/TP calculation.
+- **Mission Telemetry**: Real-time log streaming from active background tasks (Python 3.9 unbuffered).
+- **War Room**: Full evaluation suite with automated PNG report generation and gallery viewing.
+- **Portfolio Fleet**: Deploy multiple specialized models across different assets (Gold, Silver, Oil) from a single bridge.
 
-## 🚀 The Sniper Ecosystem
+## Getting Started
 
-This suite consists of four specialized layers designed for high-performance trading of Gold (XAUUSD), Silver (XAGUSD), and Oil (WTI).
+### 1. Installation
+Ensure MT5 is installed and logged into your account.
+```bash
+pip install -r requirements.txt
+pip install "numpy<2.0"  # Critical for MetaTrader5 compatibility
+```
 
-### 1. Performance Dashboard (`dashboard.py`)
-Generates a stunning, interactive HTML report of your live trading history.
-- **Run**: `py -3.11 dashboard.py`
-- **Output**: Open `results/live_dashboard.html` in any browser.
-- **Metrics**: Real-time Win Rate, Profit Factor, and Max Drawdown tracking.
-
-### 2. Auto-Retraining Pipeline (`retrain_pipeline.py`)
-Features the **"Champion vs. Challenger"** validation system to prevent model decay.
-- **Run**: `py -3.11 retrain_pipeline.py`
-- **Logic**: Automatically fetches last 30 days of data -> Hides latest 5 days (Hold-out set) -> Fine-tunes PPO -> Only promotes the new model if it outperforms the current live version on unseen data.
-
-### 3. Universal Expert Trainer (`universal_trainer.py`)
-Master any market by training a specialized brain for that specific asset.
-- **Run**: `py -3.11 universal_trainer.py [SYMBOL] [STEPS]`
-- **Example**: `py -3.11 universal_trainer.py XAGUSD 500000`
-- **Result**: Creates an expert model in `models/[symbol]/experts/`.
-
-### 4. Multi-Instance Manager (`multi_instance_trader.py`)
-The ultimate execution bridge that manages multiple experts simultaneously.
-- **Run**: `py -3.11 multi_instance_trader.py`
-- **Logic**: Independent conviction-drop exit tracking, dynamic lot sizing, and multi-symbol order management through a single MT5 connection.
-
-### 5. API Command Center (`api_server.py`) [NEW] ⭐
-The master entry point for the entire system. Provides a web-based UI to manage your platform.
-- **Run**: `py -3.11 api_server.py`
-- **Interface**: Open `http://localhost:8000` in your browser.
-- **Features**: Remote Start/Stop traders, trigger retraining, and monitor MT5 health.
-- **Documentation**: Swagger UI at `http://localhost:8000/docs`.
-
-### 6. ONNX Native Exporter (`export_onnx.py`) [NEW] 🦾
-Migrate from Python-bridge to a **Native MQL5 Expert Advisor**.
-- **Run**: `py -3.11 export_onnx.py [SYMBOL]`
-- **Logic**: Extracts the PPO brain and embeds the `VecNormalize` statistics (mean/var) directly into a standalone `.onnx` file.
-- **Deployment**: Place the resulting `.onnx` file in your MT5 `MQL5/Files` directory and use the template in `mql5/ppo_sniper_template.mq5`.
+### 2. Launch the Ecosystem
+Start the master Command Center:
+```powershell
+py -3.9 api_server_v2.py
+```
+Open **`http://localhost:8000`** in your browser.
 
 ---
 
-## 🏗️ Project Structure
+## The Ecosystem Layers
 
+### The Forge (Training)
+Train specialized brains for any symbol/timeframe.
+- **Expert V3**: Traditional PPO with 3-action space (Buy, Sell, Hold).
+- **Sniper V4**: Advanced 2D output (Position Conviction + ATR Multiplier).
+- **Execution**: Managed via `train_v3.py` and `train_v4.py`.
+
+### The Evaluation
+Rigorous backtesting with visual reporting.
+- generates **Equity Curves**, **Position Heatmaps**, and **ATR Volatility** diagnostics.
+- Reports are saved to `reports/` and viewable in the dashboard gallery.
+
+### Live Deployment
+Deploy models to the markets with surgical precision.
+- **Live Mode**: Executes trades directly on your MT5 account.
+- **Dry Run (Paper)**: Institutional-grade monitoring mode to verify model conviction before risking capital.
+- **Fleet Manager**: Orchestrates `multi_instance_trader.py` for portfolio-wide execution.
+
+---
+
+## Project Architecture
 ```
 PPO_trader/
-├── models/                    # 🧠 Brains & Stats
-│   └── [symbol]/              # e.g., xauusd/
-│       ├── experts/           # Production models
-│       ├── checkpoints/       # Training snapshots
-│       └── backups/           # Replaced versions
-│
-├── data/                      # 📊 Raw Market Data
-├── features/                  # 🛠️ 35+ Indicator Engineering
-├── env/                       # 🌍 Advanced Gymnasium Environments
-├── evaluation/                # ⚖️ Backtesting & Metrics
-├── logs/                      # 📈 TensorBoard & Live CSV Logs
-├── results/                   # 🖼️ Dashboards & PNG Reports
-├── mql5/                      # 🦾 Native MT5 Expert Advisors (ONNX)
-│   └── ppo_sniper_native.mq5  # Deployment-ready Expert Advisor
-│
-├── api_server.py              # 🛰️ Master Command Center (FastAPI)
-├── multi_instance_trader.py   # Multi-asset Execution Manager
-├── retrain_pipeline.py        # Automated Maintenance
-├── universal_trainer.py       # Specialist Training 
-└── dashboard.py               # Performance Visualization 
+├── api_server_v2.py           # Master Hub (FastAPI + Real-time Logs)
+├── templates/index.html       # Glassmorphism Dashboard UI
+├── models/                    # Brains & Normalization Stats
+│   └── [symbol]/              # Hierarchical model storage
+├── data/                      # Raw csv Market Data
+├── features/                  # 35+ Indicator Engineering (Indicators V2)
+├── env/                       # Advanced Gymnasium Environments (V3 & V4)
+├── reports/                   # Evaluation Charts & Results
+├── live_sniper_v4.py          # Scalper Execution Bridge
+├── live_trader_mt5_v2.py      # Sessioned Execution Bridge
+└── multi_instance_trader.py   # Multi-asset Portfolio Manager
 ```
 
 ---
 
-## 🔧 Technical Core
+## Expert vs. Sniper: What's the Difference?
 
-### Feature Engineering (`indicators_v2.py`)
-Over **35 technical features** providing a deep market context:
-- **Momentum**: RSI, MACD, ADX, Stochastic.
-- **Volatility**: ATR, Historical Volatility, BB Width.
-- **Trend**: SMMA, TEMA, Multi-timeframe RSI (15M/30M).
-- **Context**: Market Sessions (Asian/London/NY), Hour/Day Sin/Cos encoding.
-
-### High-Frequency Env (`trading_env_v3.py`)
-- **Continuous Action Space**: Precise position sizing from -100% to +100%.
-- **Net Accounting**: Robust cash/share tracking to prevent numerical instability.
-- **Safety**: 0.5% Hard Stop-Loss and 1.5% Take-Profit by default.
+| Feature | Expert V3 (Sessioned) | Sniper V4 (Adaptive) |
+| :--- | :--- | :--- |
+| **Logic** | Fixed SL/TP Percentages | Adaptive ATR-based SL/TP |
+| **Action Space** | 1D (Buy/Sell/Wait) | 2D (Position + Multiplier) |
+| **Exit Trigger** | Conviction-Drop Logic | Continuous Neural Adjustment |
+| **Ideal For** | Major Session Trends | High-Volatility Scalping |
 
 ---
 
-## 📈 Strategic Workflow
-
-1. **Research**: Train a new expert using `universal_trainer.py`.
-2. **Deploy**: Add the model path to `ASSETS` in `multi_instance_trader.py`.
-3. **Analyze**: Run `dashboard.py` weekly to review the equity curve and drawdown.
-4. **Maintain**: Run `retrain_pipeline.py` monthly to adapt the model to current market conditions.
-
----
-
-## 🎓 Training Signs
-
-**Good Signs:**
-✅ `ep_rew_mean` increasing over time.
-✅ `explained_variance` > 0.5 (Value function understands the market).
-✅ `eval/sharpe_ratio` > 1.5 during retraining duels.
-
-**Bad Signs:**
-❌ `approx_kl` > 0.05 (Updates are too aggressive, reducing LR).
-❌ `entropy_loss` flatlining too early (The model stopped exploring patterns).
+## Safe Deployment Protocol
+1. **Train** in The Forge for 1,000,000 steps.
+2. **Evaluate** in The War Room (Check for > 1.5 Sharpe Ratio).
+3. **Dry Run** for at least 24 hours to verify "Live Telemetry" parity.
+4. **Go Live** with minimal lot sizes (0.01) to verify fill performance.
 
 ---
 
-## ⚠️ Disclaimer
-
-This is a professional algorithmic trading suite. 
-**Past performance does not guarantee future results.** 
-Always verify in **Demo Mode** (`DRY_RUN = True`) before risking real capital. The authors are not responsible for financial losses incurred.
+## Disclaimer
+ algorithmic trading carries high risk. **Past performance does not guarantee future results.** The authors are not responsible for financial losses. Always use `DRY_RUN = True` for initial testing.
 
 ---
-**Built with ❤️ for High-Alpha Algorithmic Trading**
+**institutional-Grade Alpha via Reinforcement Learning.**

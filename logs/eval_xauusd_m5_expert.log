@@ -1,0 +1,103 @@
+================================================================================
+PPO TRADING AGENT - COMPREHENSIVE EVALUATION
+================================================================================
+
+ Loading model: models/xauusd/experts/xauusd_m5_ppo_expert.zip
+
+ Loading data: data/xauusd_m5.csv
+   Raw data shape: (50000, 6)
+   Features: 35
+   Enhanced data shape: (49961, 55)
+   Test set size: 14989
+
+  Creating test environment...
+   Loading normalization stats: models/xauusd/experts/xauusd_m5_ppo_expert_vec_normalize.pkl
+
+Running evaluation...
+   Step 1000/14989 - Portfolio: $11,550.90
+   Step 2000/14989 - Portfolio: $13,905.14
+   Step 3000/14989 - Portfolio: $16,156.10
+   Step 4000/14989 - Portfolio: $18,192.56
+   Step 5000/14989 - Portfolio: $19,664.00
+   Step 6000/14989 - Portfolio: $21,205.52
+   Step 7000/14989 - Portfolio: $23,982.07
+   Step 8000/14989 - Portfolio: $26,474.00
+   Step 9000/14989 - Portfolio: $28,315.82
+   Step 10000/14989 - Portfolio: $30,557.69
+   Step 11000/14989 - Portfolio: $32,164.31
+   Step 12000/14989 - Portfolio: $33,798.22
+   Step 13000/14989 - Portfolio: $36,624.77
+   Step 14000/14989 - Portfolio: $39,217.75
+
+Evaluation complete!
+
+Calculating metrics...
+
+============================================================
+                XAUUSD M5 - Test Performance                
+============================================================
+
+                   Portfolio Performance                    
+------------------------------------------------------------
+Final Value:          $      42,915.55
+Total Return:                 329.16%
+Annualized Return:         115535.01%
+
+                        Risk Metrics                        
+------------------------------------------------------------
+Sharpe Ratio:                   32.49
+Sortino Ratio:                  51.75
+Max Drawdown:                  -1.80%
+Volatility (Annual):           21.72%
+Calmar Ratio:                64025.94
+Recovery Factor:               182.41
+
+                      Trade Statistics                      
+------------------------------------------------------------
+Total Trades:                    1149
+Win Rate:                      79.03%
+Profit Factor:                   6.19
+Average Win:                    0.26%
+Average Loss:                  -0.16%
+Expectancy:                     0.17%
+
+============================================================
+
+                   Performance Assessment                   
+------------------------------------------------------------
+Excellent Sharpe Ratio (>2.0)
+Low Drawdown (<15%)
+Good Win Rate (>55%)
+Excellent Profit Factor (>2.0)
+============================================================
+
+
+Metrics saved: reports/xauusd_m5_test_metrics.csv
+
+Generating visualizations...
+   - Equity curve with drawdown...
+   - Trade distribution...
+   - Rolling Sharpe ratio...
+   - Action distribution...
+
+Visualizations saved to: reports/
+
+Baseline Comparison: Buy and Hold
+--------------------------------------------------------------------------------
+Buy & Hold Return:       7.00%
+PPO Agent Return:      329.16%
+Outperformance:        322.16%
+
+PPO agent outperformed buy-and-hold by 322.16%
+
+================================================================================
+EVALUATION SUMMARY
+================================================================================
+Final Portfolio Value: $42,915.55
+Total Return:          329.16%
+Sharpe Ratio:          32.49
+Max Drawdown:          -1.80%
+Win Rate:              79.03%
+Profit Factor:         6.19
+Total Trades:          1149
+================================================================================

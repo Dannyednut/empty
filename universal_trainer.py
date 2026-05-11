@@ -27,7 +27,7 @@ def train_expert(symbol, timesteps=500000, timeframe=mt5.TIMEFRAME_M5):
     # 1. Data Fetching (Use last 100 days for broad master training)
     print(f"📡 Fetching historical data for {symbol}...")
     utc_from = datetime.now() - timedelta(days=100)
-    rates = mt5.copy_rates_from(symbol, timeframe, utc_from, datetime.now())
+    rates = mt5.copy_rates_range(symbol, timeframe, utc_from, datetime.now())
     mt5.shutdown()
     
     if rates is None or len(rates) == 0:
@@ -40,19 +40,34 @@ def train_expert(symbol, timesteps=500000, timeframe=mt5.TIMEFRAME_M5):
     # 2. Build Pipeline
     print("🛠️ Building Features...")
     df = build_features(df, base_timeframe='5min').dropna()
+    feature_columns = get_feature_columns()
+    
+    # Filter features that exist in df
+    feature_columns = [col for col in feature_columns if col in df.columns]
+    print(f"   Features: {len(feature_columns)}")
+    print(f"   Enhanced data shape: {df.shape}")
     
     # 3. Setup Environment
     print("🌍 Preparing Environment...")
     def make_env():
-        return AdvancedTradingEnv(df, initial_balance=10000)
+        return AdvancedTradingEnv(df, feature_columns=feature_columns)
     
     env = DummyVecEnv([make_env])
     env = VecNormalize(env, norm_obs=True, norm_reward=True)
     
+    # Check if tensorboard is available
+    try:
+        import tensorboard
+        use_tensorboard = False #True
+    except ImportError:
+        print(f"   ⚠️  TensorBoard not installed. Training will proceed without logging.")
+        print(f"   Install with: pip install tensorboard")
+        use_tensorboard = False
+    
     # 4. Model Definition
     print("🧠 Defining Neural Architecture...")
     policy_kwargs = dict(net_arch=dict(pi=[256, 256, 128], vf=[256, 256, 128]))
-    
+
     model = PPO(
         "MlpPolicy",
         env,
@@ -66,7 +81,7 @@ def train_expert(symbol, timesteps=500000, timeframe=mt5.TIMEFRAME_M5):
         clip_range=0.2,
         ent_coef=0.01,
         policy_kwargs=policy_kwargs,
-        tensorboard_log=f"./logs/tensorboard/{symbol.lower()}_expert/"
+        tensorboard_log=f"./logs/tensorboard/{symbol.lower()}_expert/" if use_tensorboard else None
     )
     
     # 5. Execute Training
@@ -100,7 +115,7 @@ if __name__ == "__main__":
         print("Usage: python universal_trainer.py SYMBOL [steps]")
         sys.exit(1)
         
-    target_symbol = sys.argv[1].upper()
+    target_symbol = sys.argv[1].upper() if len(sys.argv) > 1 else "XAUUSD"
     steps = int(sys.argv[2]) if len(sys.argv) > 2 else 500000
     
     train_expert(target_symbol, timesteps=steps)

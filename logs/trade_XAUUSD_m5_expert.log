@@ -1,0 +1,30 @@
+Connected to MT5: 5044207315
+Balance: $101641.56 | Equity: $101641.56
+Filling mode: 0
+Agent Loaded Ready.
+
+Bot V2 started. Monitoring XAUUSD M5...
+Target Action: 0.6229 | Peak: 0.0000
+XAUUSD BUY 0.01 @ 4430.62
+Target Action: 1.0000 | Peak: 0.6229
+New Peak Conviction reached: 1.0000 (Prev: 0.6229)
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 0.4287 | Peak: 1.0000
+CONVICTION DROP DETECTED! Current 0.4287 < 1.0000 drop limit. Exiting.
+Closed 54544770608 for PeakDrop: 1.00->0.43
+Target Action: 0.4922 | Peak: 0.0000
+XAUUSD BUY 0.01 @ 4436.65
+Target Action: 0.9392 | Peak: 0.4922
+New Peak Conviction reached: 0.9392 (Prev: 0.4922)
+Target Action: 1.0000 | Peak: 0.9392
+New Peak Conviction reached: 1.0000 (Prev: 0.9392)
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000
+Target Action: 1.0000 | Peak: 1.0000

@@ -21,14 +21,22 @@ from features.indicators_v2 import build_features, get_feature_columns
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
-SYMBOL = "XAUUSD"
-TIMEFRAME = mt5.TIMEFRAME_M5
-BASE_TIMEFRAME_STR = '5min'
-MODEL_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert.zip"
-STATS_PATH = "models/xauusd/experts/xauusd_m5_ppo_expert_vec_normalize.pkl"
+import argparse
+parser = argparse.ArgumentParser(description="PPO Trading Agent - Live MT5 Execution Bridge")
+parser.add_argument("--symbol", type=str, default="XAUUSD", help="Trading symbol (e.g., XAUUSD)")
+parser.add_argument("--tf", type=str, default="M5", choices=["M1", "M5", "M15", "M30", "H1"], help="Timeframe")
+parser.add_argument("--lots", type=float, default=0.01, help="Lot size (fixed)")
+parser.add_argument("--dry_run", type=bool, default=False, help="Dry run mode")
+args = parser.parse_args()
+
+SYMBOL = args.symbol
+TIMEFRAME = getattr(mt5, f"TIMEFRAME_{args.tf.upper()}")
+BASE_TIMEFRAME_STR = '5min' if args.tf.upper() == 'M5' else '15min' if args.tf.upper() == 'M15' else '30min'
+MODEL_PATH = f"models/{args.symbol.lower()}/experts/{args.symbol.lower()}_{args.tf.lower()}_ppo_expert.zip"
+STATS_PATH = f"models/{args.symbol.lower()}/experts/{args.symbol.lower()}_{args.tf.lower()}_ppo_expert_vec_normalize.pkl"
 
 # Operational Settings
-DRY_RUN = False  # Set to False for real execution
+DRY_RUN = args.dry_run  # Set to False for real execution
 POLLING_INTERVAL = 1  # Seconds between checks for new candle
 MAGIC_NUMBER = 20241231  # Unique ID for this bot's orders
 COMMENT = "PPO_Sniper_V2"
@@ -78,13 +86,13 @@ class LivePPOTraderV2:
         
     def _initialize_mt5(self):
         if not mt5.initialize():
-            print(f"❌ MT5 initialization failed, error code = {mt5.last_error()}")
+            print(f"MT5 initialization failed, error code = {mt5.last_error()}")
             sys.exit(1)
         account_info = mt5.account_info()
         if account_info is None:
             sys.exit(1)
-        print(f"✅ Connected to MT5: {account_info.login}")
-        print(f"💰 Balance: ${account_info.balance:.2f} | Equity: ${account_info.equity:.2f}")
+        print(f"Connected to MT5: {account_info.login}")
+        print(f"Balance: ${account_info.balance:.2f} | Equity: ${account_info.equity:.2f}")
 
     def _detect_filling_mode(self):
         symbol_info = mt5.symbol_info(SYMBOL)
@@ -100,7 +108,7 @@ class LivePPOTraderV2:
             self.filling_mode = mt5.ORDER_FILLING_IOC
         else:
             self.filling_mode = mt5.ORDER_FILLING_RETURN
-        print(f"🔧 Filling mode: {self.filling_mode}")
+        print(f"Filling mode: {self.filling_mode}")
         
     def _load_agent(self):
         self.model = PPO.load(MODEL_PATH)
@@ -109,7 +117,7 @@ class LivePPOTraderV2:
             self.vec_normalize = VecNormalize.load(STATS_PATH, dummy_env)
             self.vec_normalize.training = False
             self.vec_normalize.norm_reward = False
-        print("🤖 Agent Loaded Ready.")
+        print("Agent Loaded Ready.")
 
     def _create_dummy_env_instance(self):
         class SimpleEnv(gym.Env):
@@ -160,11 +168,11 @@ class LivePPOTraderV2:
         return total_profit / equity
 
     def execute_trade(self, target_action, candle_time):
-        print(f"🎯 Target Action: {target_action:.4f} | Peak: {self.peak_conviction:.4f}")
+        print(f"Target Action: {target_action:.4f} | Peak: {self.peak_conviction:.4f}")
         self._log_event(candle_time, target_action, "SIGNAL")
         
         if DRY_RUN:
-            print("🕒 [DRY RUN]")
+            print("DRY RUN - No trade executed")
             return
 
         self._sync_positions_v2(target_action, candle_time)
@@ -183,17 +191,17 @@ class LivePPOTraderV2:
             
             if side_matched:
                 if conviction > self.peak_conviction:
-                    print(f"🔥 New Peak Conviction reached: {conviction:.4f} (Prev: {self.peak_conviction:.4f})")
+                    print(f"New Peak Conviction reached: {conviction:.4f} (Prev: {self.peak_conviction:.4f})")
                     self.peak_conviction = conviction
                 
                 # CHECK FOR CONVICTION DROP EXIT
                 if conviction < self.peak_conviction * (1 - CONVICTION_DROP_THRESHOLD):
-                    print(f"🚨 CONVICTION DROP DETECTED! Current {conviction:.4f} < {self.peak_conviction:.4f} drop limit. Exiting.")
+                    print(f"CONVICTION DROP DETECTED! Current {conviction:.4f} < {self.peak_conviction:.4f} drop limit. Exiting.")
                     self._close_all(candle_time, target_action, f"PeakDrop: {self.peak_conviction:.2f}->{conviction:.2f}")
                     return # Exit triggered, don't re-open same bar
             else:
                 # Model changed direction completely (e.g., target say Sell while we are Long)
-                print(f"🔄 Direction Change: Target {target_action:.4f} vs Pos {current_type}. Flipping.")
+                print(f"Direction Change: Target {target_action:.4f} vs Pos {current_type}. Flipping.")
                 self._close_all(candle_time, target_action, "DirFlip")
 
         # 2. Decide Entry or Flipping
@@ -210,6 +218,12 @@ class LivePPOTraderV2:
     def _close_all(self, candle_time, action, reason=""):
         positions = mt5.positions_get(symbol=SYMBOL)
         if not positions: return
+
+        if DRY_RUN:
+            print(f"[DRY RUN] Would close {len(positions)} positions for {reason}")
+            self._log_event(candle_time, action, "DRY_CLOSE", 0, 0, reason)
+            return
+
         for pos in positions:
             tick = mt5.symbol_info_tick(SYMBOL)
             type_close = mt5.ORDER_TYPE_SELL if pos.type == mt5.POSITION_TYPE_BUY else mt5.ORDER_TYPE_BUY
@@ -229,7 +243,7 @@ class LivePPOTraderV2:
             }
             res = mt5.order_send(request)
             if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                print(f"✅ Closed {pos.ticket} for {reason}")
+                print(f"Closed {pos.ticket} for {reason}")
                 self._log_event(candle_time, action, "CLOSE", pos.volume, price_close, reason)
         
         # Reset Peak state after closing
@@ -240,10 +254,19 @@ class LivePPOTraderV2:
         tick = mt5.symbol_info_tick(SYMBOL)
         price = tick.ask if order_type == mt5.ORDER_TYPE_BUY else tick.bid
         
-        equity = mt5.account_info().equity
-        raw_lots = (equity / 1000.0) * 0.01 * min(weight, 1.0)
-        lots = round(max(symbol_info.volume_min, min(1.0, raw_lots)) / symbol_info.volume_step) * symbol_info.volume_step
+        # Determine lots: prioritize --lots argument if > 0, else use dynamic equity-based scaling
+        if args.lots > 0:
+            lots = args.lots
+        else:
+            equity = mt5.account_info().equity
+            raw_lots = (equity / 1000.0) * 0.01 * min(weight, 1.0)
+            lots = round(max(symbol_info.volume_min, min(1.0, raw_lots)) / symbol_info.volume_step) * symbol_info.volume_step
         
+        if DRY_RUN:
+            print(f"[DRY RUN] Would {'BUY' if order_type==0 else 'SELL'} {lots:.2f} {SYMBOL} (Conviction: {weight:.2f})")
+            self._log_event(candle_time, weight, "DRY_OPEN", lots, price, "DryRun")
+            return
+
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": SYMBOL,
@@ -265,13 +288,13 @@ class LivePPOTraderV2:
 
         res = mt5.order_send(request)
         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-            print(f"🚀 {SYMBOL} {'BUY' if order_type==0 else 'SELL'} {lots:.2f} @ {price}")
+            print(f"{SYMBOL} {'BUY' if order_type==0 else 'SELL'} {lots:.2f} @ {price}")
             self._log_event(candle_time, weight, "BUY" if order_type==0 else "SELL", lots, price, "OpenV2")
             # Initialize peak conviction for the new trade
             self.peak_conviction = abs(weight)
 
     def run(self):
-        print(f"\n🚀 Bot V2 started. Monitoring {SYMBOL} M5...")
+        print(f"\nBot V2 started. Monitoring {SYMBOL} M5...")
         while True:
             try:
                 now = datetime.now()
@@ -287,7 +310,7 @@ class LivePPOTraderV2:
                 time.sleep(POLLING_INTERVAL)
             except KeyboardInterrupt: break
             except Exception as e:
-                print(f"⚠️ Error: {e}")
+                print(f"Error: {e}")
                 time.sleep(10)
 
 if __name__ == "__main__":

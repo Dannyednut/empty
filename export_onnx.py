@@ -1,11 +1,12 @@
 """
-PPO Sniper - ONNX Export Utility
-Converts SB3 Expert Models to Native MQL5 ONNX files with embedded normalization.
+PPO Sniper - ONNX Export Utility (Standalone Mode)
+Converts SB3 Expert Models to a SINGLE, self-contained MQL5 ONNX file.
 """
 import torch
 import torch.nn as nn
 import os
 import numpy as np
+import onnx
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import VecNormalize
 
@@ -28,14 +29,13 @@ class SmartOnnxWrapper(nn.Module):
         x_norm = (x - self.mean) / torch.sqrt(self.var + self.epsilon)
         
         # 2. Extract latent features from policy
-        # For MlpPolicy, SB3 uses mlp_extractor for shared layers
         latent_pi, _ = self.policy.mlp_extractor(x_norm)
         
-        # 3. Get action (mean of distribution for deterministic)
+        # 3. Get action (mean of distribution)
         action_mean = self.policy.action_net(latent_pi)
         
-        # 4. For continuous PPO, we often want just the mean
-        return action_mean
+        # 4. Squashing (Matches Box(-1, 1) predict logic)
+        return torch.tanh(action_mean)
 
 def export_to_onnx(symbol="xauusd"):
     # Paths
@@ -56,18 +56,21 @@ def export_to_onnx(symbol="xauusd"):
     mean, var = np.zeros(model.observation_space.shape), np.ones(model.observation_space.shape)
     if os.path.exists(stats_path):
         print(f"Loading Normalization Stats: {stats_path}")
-        # Direct load to avoid needing a dummy environment
         import pickle
         with open(stats_path, "rb") as f:
             vn_data = pickle.load(f)
-            # Handle both older and newer SB3 serialization versions
             if hasattr(vn_data, 'obs_rms'):
                 mean = vn_data.obs_rms.mean
                 var = vn_data.obs_rms.var
             else:
-                # If it's a dict (some versions)
                 mean = vn_data.get('obs_rms.mean', mean)
                 var = vn_data.get('obs_rms.var', var)
+        
+        print(f"📊 Normalization Stats Summary:")
+        print(f"   Features: {len(mean)}")
+        print(f"   Mean (First 5): {mean[:5]}")
+        print(f"   Var  (First 5): {var[:5]}")
+        print(f"   Position Mean (Idx 35): {mean[35]:.4f}")
     
     # 2. Create the Wrapper
     print("Creating Smart ONNX Wrapper...")
@@ -78,17 +81,30 @@ def export_to_onnx(symbol="xauusd"):
     dummy_input = torch.randn(1, *model.observation_space.shape)
     
     print(f"Exporting to {output_path}...")
+    # Using legacy tracing to minimize split issues
     torch.onnx.export(
         wrapper,
         dummy_input,
         output_path,
         export_params=True,
-        opset_version=14, # Modern opset for MT5 compatibility
+        opset_version=14,
         do_constant_folding=True,
         input_names=['input'],
         output_names=['output'],
         dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
     )
+    
+    # 4. FORCE MERGE (Critical for MQL5)
+    # Even if PyTorch exports weights to .data, we merge them back into the main .onnx
+    data_file = output_path + ".data"
+    if os.path.exists(data_file):
+        print("⚠️ Split data detected. Merging weights into a single file...")
+        model_onnx = onnx.load(output_path)
+        onnx.save(model_onnx, output_path, save_as_external_data=False)
+        os.remove(data_file)
+        print("✅ SUCCESS: Model is now a single self-contained .onnx file.")
+    else:
+        print("✅ Model is already self-contained.")
     
     print("Done! You can now use this file in MQL5.")
 

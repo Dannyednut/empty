@@ -21,12 +21,17 @@ from features.indicators_v2 import build_features, get_feature_columns
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("--dry_run", type=str, default="False")
+args = parser.parse_args()
+
 ASSETS = [
     {"symbol": "XAUUSD", "model": "models/xauusd/experts/xauusd_m5_ppo_expert.zip", "stats": "models/xauusd/experts/xauusd_m5_ppo_expert_vec_normalize.pkl"},
     {"symbol": "XAGUSD", "model": "models/xagusd/experts/xagusd_m5_ppo_expert.zip", "stats": "models/xagusd/experts/xagusd_m5_ppo_expert_vec_normalize.pkl"},
 ]
 
-DRY_RUN = False
+DRY_RUN = args.dry_run.lower() == "true"
 POLLING_INTERVAL = 1
 MAGIC_NUMBER_BASE = 20241200
 LOG_FILE = "logs/multi_asset_live_log.csv"
@@ -47,9 +52,9 @@ class ExpertInstance:
         # Load
         if os.path.exists(self.model_path):
             self.model = PPO.load(self.model_path)
-            print(f"✅ Loaded Expert: {self.symbol}")
+            print(f"Loaded Expert: {self.symbol}")
         else:
-            print(f"⚠️ Skip {self.symbol}: Model not found at {self.model_path}")
+            print(f"Skip {self.symbol}: Model not found at {self.model_path}")
 
     def init_stats(self, dummy_env):
         if os.path.exists(self.stats_path):
@@ -89,7 +94,7 @@ class MultiInstanceTrader:
 
     def _initialize_mt5(self):
         if not mt5.initialize(): sys.exit(1)
-        print(f"✅ Multi-Bridge Online: {mt5.account_info().login}")
+        print(f"Multi-Bridge Online: {mt5.account_info().login}")
 
     def _detect_filling_mode(self, symbol):
         symbol_info = mt5.symbol_info(symbol)
@@ -185,7 +190,7 @@ class MultiInstanceTrader:
             }
             res = mt5.order_send(request)
             if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-                print(f"✅ {expert.symbol} Closed: {reason}")
+                print(f"{expert.symbol} Closed: {reason}")
                 self._log_event(expert, candle_time, action, "CLOSE", pos.volume, price, reason)
         expert.peak_conviction = 0.0
 
@@ -208,7 +213,7 @@ class MultiInstanceTrader:
 
         res = mt5.order_send(request)
         if res and res.retcode == mt5.TRADE_RETCODE_DONE:
-            print(f"🚀 {expert.symbol} {'BUY' if order_type==0 else 'SELL'} @ {price}")
+            print(f"{expert.symbol} {'BUY' if order_type==0 else 'SELL'} @ {price}")
             self._log_event(expert, candle_time, weight, "BUY" if order_type==0 else "SELL", lots, price)
             expert.peak_conviction = abs(weight)
 

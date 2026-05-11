@@ -86,6 +86,21 @@ def calculate_obv(close: pd.Series, volume: pd.Series) -> pd.Series:
     return obv
 
 
+def calculate_divergence(price: pd.Series, rsi: pd.Series, lookback: int = 10) -> pd.Series:
+    """ Detects Bullish/Bearish Divergence (0: none, 1: Bull, -1: Bear) """
+    price_high = price.rolling(window=lookback).max()
+    price_low = price.rolling(window=lookback).min()
+    rsi_high = rsi.rolling(window=lookback).max()
+    rsi_low = rsi.rolling(window=lookback).min()
+    
+    # Bearish: Price Higher High + RSI Lower High
+    bear = ((price > price.shift(lookback)) & (rsi < rsi.shift(lookback))).astype(float) * -1
+    # Bullish: Price Lower Low + RSI Higher Low
+    bull = ((price < price.shift(lookback)) & (rsi > rsi.shift(lookback))).astype(float) * 1
+    
+    return bull + bear
+
+
 def resample_to_higher_timeframe(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Resample data to higher timeframe
@@ -248,6 +263,13 @@ def build_features(df: pd.DataFrame, base_timeframe: str = '5min') -> pd.DataFra
     df['candle_body_ratio'] = body / (range_candle + 1e-10)
     df['is_doji'] = (df['candle_body_ratio'] < 0.1).astype(float)
     
+    # Divergence Features (The "Apex" Anticipator)
+    df['rsi_divergence'] = calculate_divergence(close, df['rsi'], lookback=10)
+    
+    # Impulse Delta (Momentum Acceleration)
+    df['impulse_3'] = close.diff(3) / (df['atr'] + 1e-10)
+    df['impulse_10'] = close.diff(10) / (df['atr'] + 1e-10)
+    
     # ============================================
     # 7. MULTI-TIMEFRAME FEATURES (Robust Implementation)
     # ============================================
@@ -336,12 +358,12 @@ def build_features(df: pd.DataFrame, base_timeframe: str = '5min') -> pd.DataFra
     if 'rsi_15m' in df.columns:
         features_to_normalize.append('rsi_15m')
     
-    # Z-score normalization (critical for stable learning)
-    for col in features_to_normalize:
-        if col in df.columns:
-            mean = df[col].mean()
-            std = df[col].std()
-            df[col] = (df[col] - mean) / (std + 1e-8)
+    # Z-score normalization (DEPRECATED: Let VecNormalize handle this in the training loop)
+    # for col in features_to_normalize:
+    #     if col in df.columns:
+    #         mean = df[col].mean()
+    #         std = df[col].std()
+    #         df[col] = (df[col] - mean) / (std + 1e-8)
     
     return df
 
@@ -370,6 +392,7 @@ def get_feature_columns() -> list:
         
         # Price action
         'dist_from_high', 'dist_from_low', 'candle_body_ratio', 'is_doji',
+        'rsi_divergence', 'impulse_3', 'impulse_10',
         
         # Time features
         'hour_sin', 'hour_cos', 'day_sin', 'day_cos',

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPO Sniper | Command Center 2.1</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&family=Fira+Code:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --bg: #020408;
+            --surface: rgba(13, 17, 23, 0.9);
+            --primary: #00ffaa;
+            --secondary: #00e5ff;
+            --accent: #7c4dff;
+            --danger: #ff3366;
+            --text-main: #e6edf3;
+            --text-dim: #8b949e;
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            background-image: radial-gradient(circle at 50% 0%, #161b22 0%, #020408 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .glass {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        header {
+            max-width: 1600px;
+            margin: 0 auto 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.4rem;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+        }
+
+        .dashboard {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            gap: 20px;
+            height: calc(100vh - 120px);
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        /* CARDS */
+        .card {
+            padding: 20px;
+        }
+
+        .card h4 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            letter-spacing: 1px;
+        }
+
+        label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        input,
+        select {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--glass-border);
+            padding: 10px;
+            border-radius: 6px;
+            color: white;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+
+        .btn-green {
+            background: var(--primary);
+            color: #000;
+        }
+
+        .btn-blue {
+            background: var(--secondary);
+            color: #000;
+        }
+
+        .btn-purple {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-red {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* STATS */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+
+        .stat-val {
+            font-family: 'Fira Code', monospace;
+            color: var(--primary);
+        }
+
+        .profit-pos {
+            color: var(--primary);
+        }
+
+        .profit-neg {
+            color: var(--danger);
+        }
+
+        /* CONSOLE & REPORTS */
+        .center-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: calc(100vh - 120px);
+            overflow: hidden;
+        }
+
+        #console-box {
+            height: 450px;
+            /* Fixed height for consistency */
+            background: #000;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            color: #adbac7;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid var(--glass-border);
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+
+        #report-viewer {
+            flex-shrink: 0;
+            height: 320px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #report-viewer img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+
+        /* TASK LIST */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task-item {
+            padding: 12px;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--primary);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .task-item.Live {
+            border-left-color: var(--secondary);
+        }
+
+        .task-item.Evaluation {
+            border-left-color: var(--accent);
+        }
+
+        .asset-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 5px;
+            font-size: 0.75rem;
+        }
+
+        .asset-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .dl-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="logo">PPO CENTER // V2.1</div>
+        <div id="clock" style="font-family: 'Fira Code'; color: var(--text-dim); font-size: 0.8rem;">00:00:00</div>
+    </header>
+
+    <div class="dashboard">
+        <!-- LEFT: GEARS -->
+        <div class="panel">
+            <div class="card glass">
+                <h4>THE FORGE</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Symbol</label>
+                        <input type="text" id="train-symbol" value="xauusd">
+                    </div>
+                    <div>
+                        <label>Timeframe</label>
+                        <select id="train-tf">
+                            <option value="m5">M5</option>
+                            <option value="m15">M15</option>
+                            <option value="m30">M30</option>
+                        </select>
+                    </div>
+                </div>
+                <label>Target Brain</label>
+                <select id="train-type">
+                    <option value="apex_v6">Sniper Apex V6 (Survivalist)</option>
+                    <option value="pulse_v5">Sniper Pulse V5 (M1 Pulse)</option>
+                    <option value="sniper">Sniper V4 (Adaptive)</option>
+                    <option value="expert">Expert V3 (Classic)</option>
+                </select>
+                <button class="btn btn-green" onclick="ops('train')">Start Training</button>
+            </div>
+
+            <div class="card glass">
+                <h4>THE WAR ROOM</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Select Profile</label>
+                        <input type="text" id="eval-symbol" value="xauusd">
+                    </div>
+                    <div>
+                        <label>Timeframe</label>
+                        <select id="eval-tf">
+                            <option value="m5">M5</option>
+                            <option value="m15">M15</option>
+                            <option value="m30">M30</option>
+                        </select>
+                    </div>
+                </div>
+                <label>Model Engine</label>
+                <select id="eval-type">
+                    <option value="apex_v6">Sniper Apex V6 (Survivalist)</option>
+                    <option value="pulse_v5">Sniper Pulse V5 (M1 Pulse)</option>
+                    <option value="sniper">Sniper V4 (Adaptive)</option>
+                    <option value="expert">Expert V3 (Classic)</option>
+                </select>
+                <button class="btn btn-purple" onclick="ops('eval')">Run Full Evaluation</button>
+                <div style="margin-top:15px;" id="report-gallery">
+                    <label>Last Reports</label>
+                    <div id="gallery-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;"></div>
+                </div>
+            </div>
+
+            <div class="card glass">
+                <h4>MAINTENANCE VAULT</h4>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Asset</label>
+                        <input type="text" id="maint-symbol" value="xauusd" style="width:100%">
+                    </div>
+                    <div>
+                        <label>Timeframe</label>
+                        <select id="maint-tf" style="width:100%">
+                            <option value="m5">M5</option>
+                            <option value="m15">M15</option>
+                            <option value="m30">M30</option>
+                        </select>
+                    </div>
+                </div>
+                <label>Model Engine</label>
+                <select id="maint-type" style="margin-bottom: 10px; width:100%">
+                    <option value="apex_v6">Sniper Apex V6 (Pre-Reversal)</option>
+                    <option value="pulse_v5">Sniper Pulse V5 (M1 Pulse)</option>
+                    <option value="sniper">Sniper V4 (Scalper)</option>
+                    <option value="expert">Expert V3 (Trader)</option>
+                </select>
+                <button class="btn" style="background:#f39c12; color:black; width:100%"
+                    onclick="ops('maintenance')">Trigger Champion Duel</button>
+            </div>
+
+        </div>
+
+        <!-- CENTER: OPS -->
+        <div class="center-stack">
+            <div class="card glass" style="flex-grow:1; display:flex; flex-direction:column;">
+                <h4>🖥️ LIVE TELEMETRY</h4>
+                <div id="console-box">System idle. Awaiting command...</div>
+            </div>
+            <div class="card glass" id="report-viewer">
+                <div style="color:var(--text-dim); font-size: 0.8rem;">No active report selected.</div>
+            </div>
+        </div>
+
+        <!-- RIGHT: COCKPIT -->
+        <div class="panel">
+            <div class="card glass">
+                <h4>THE COCKPIT</h4>
+                <label>Asset</label>
+                <input type="text" id="trade-symbol" value="XAUUSD">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Timeframe</label>
+                        <select id="trade-tf">
+                            <option value="m5">M5</option>
+                            <option value="m15">M15</option>
+                            <option value="m30">M30</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>Lots</label>
+                        <input type="number" id="trade-lots" value="0.01" step="0.01">
+                    </div>
+                </div>
+                <label>Execution</label>
+                <select id="trade-dry">
+                    <option value="false">Live (Account Risk)</option>
+                    <option value="true">Dry Run (Paper)</option>
+                </select>
+                <label>Model Core</label>
+                <select id="trade-type">
+                    <option value="apex_v6">Sniper Apex V6 (Survivalist)</option>
+                    <option value="pulse_v5">Sniper Pulse V5 (M1 Pulse)</option>
+                    <option value="sniper">Sniper V4 (Scalper)</option>
+                    <option value="expert">Expert V3 (Trader)</option>
+                </select>
+                <button class="btn btn-blue" onclick="ops('trade')">Deploy Instance</button>
+                <button class="btn"
+                    style="background:rgba(255,255,255,0.05); color:white; font-size: 0.65rem; margin-top:5px;"
+                    onclick="fleet()">Launch Fleet Portfolio</button>
+                <button class="btn btn-red" style="margin-top:10px;" onclick="stop('all_traders')">PANIC STOP</button>
+            </div>
+
+            <div class="card glass">
+                <h4>ACCOUNT STATS</h4>
+                <div id="stats-box">
+                    <div class="stat-row"><span>Balance</span><span id="stat-bal" class="stat-val">$0.00</span></div>
+                    <div class="stat-row"><span>Equity</span><span id="stat-eq" class="stat-val">$0.00</span></div>
+                    <div class="stat-row"><span>Open Profit</span><span id="stat-profit" class="stat-val">$0.00</span>
+                    </div>
+                    <div class="stat-row"><span>Active Trades</span><span id="stat-trades" class="stat-val">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card glass">
+                <h4>ACTIVE MISSIONS</h4>
+                <div class="task-list" id="task-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "/api";
+        let activeTrace = null;
+
+        async function updateStats() {
+            try {
+                const r = await axios.get(`${API}/stats`);
+                if (r.data.error) return;
+                document.getElementById('stat-bal').innerText = `$${r.data.balance.toLocaleString()}`;
+                document.getElementById('stat-eq').innerText = `$${r.data.equity.toLocaleString()}`;
+                document.getElementById('stat-profit').innerText = `$${r.data.profit.toLocaleString()}`;
+                document.getElementById('stat-profit').className = 'stat-val ' + (r.data.profit >= 0 ? 'profit-pos' : 'profit-neg');
+                document.getElementById('stat-trades').innerText = r.data.active_trades;
+            } catch (e) { }
+        }
+
+        async function refresh() {
+            try {
+                // 1. Tasks
+                const status = await axios.get(`${API}/status`);
+                const taskDiv = document.getElementById('task-list');
+                taskDiv.innerHTML = status.data.active_tasks.map(t => `
+                    <div class="task-item ${t.type.split(' ')[0]}">
+                        <div style="display:flex; justify-content:space-between">
+                            <strong>${t.type}</strong>
+                            <span onclick="stop('${t.id}')" style="cursor:pointer; color:var(--danger)">✖</span>
+                        </div>
+                        <div style="font-size:0.65rem; color:var(--text-dim)">${t.id}</div>
+                        <button onclick="setTrace('${t.id}')" style="margin-top:5px; font-size:0.6rem; padding:2px 5px;">View Logs</button>
+                    </div>
+                `).join('');
+
+                // 3. Reports
+                const reports = await axios.get(`${API}/reports`);
+                document.getElementById('report-gallery').innerHTML = '<label>Recent Reports</label>' + reports.data.reports.slice(0, 5).map(r => `
+                    <div class="asset-row" style="cursor:pointer" onclick="viewRep('${r.url}')">
+                        <span style="color:var(--secondary)">${r.name}</span>
+                    </div>
+                `).join('');
+
+            } catch (e) { }
+        }
+
+        async function ops(type) {
+            let config = {};
+            if (type === 'train') config = { symbol: document.getElementById('train-symbol').value, timeframe: document.getElementById('train-tf').value, steps: 500000, model_type: document.getElementById('train-type').value };
+            if (type === 'trade') config = { symbol: document.getElementById('trade-symbol').value, timeframe: document.getElementById('trade-tf').value, lots: document.getElementById('trade-lots').value, dry_run: document.getElementById('trade-dry').value === 'true', model_type: document.getElementById('trade-type').value };
+            if (type === 'eval') config = { symbol: document.getElementById('eval-symbol').value, timeframe: document.getElementById('eval-tf').value, model_type: document.getElementById('eval-type').value };
+            if (type === 'maintenance') config = { symbol: document.getElementById('maint-symbol').value, timeframe: document.getElementById('maint-tf').value, model_type: document.getElementById('maint-type').value, steps: 50000 };
+
+            const r = await axios.post(`${API}/${type}/start`, config);
+            if (r.data.task_id) setTrace(r.data.task_id);
+            refresh();
+        }
+
+        async function fleet() {
+            const isDry = document.getElementById('trade-dry').value === 'true';
+            const r = await axios.post(`${API}/trade/fleet?dry_run=${isDry}`);
+            if (r.data.task_id) setTrace(r.data.task_id);
+            refresh();
+        }
+
+        async function stop(id) {
+            await axios.post(`${API}/stop?task_id=${id}`);
+            refresh();
+        }
+
+        function setTrace(id) { activeTrace = id; }
+        function viewRep(url) { document.getElementById('report-viewer').innerHTML = `<img src="${url}">`; }
+
+        async function pollLogs() {
+            if (!activeTrace) return;
+            try {
+                const r = await axios.get(`${API}/logs?task_id=${activeTrace}`);
+                const box = document.getElementById('console-box');
+
+                // Check if user is near the bottom
+                const isNearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 100;
+
+                box.innerText = r.data.logs.join('');
+
+                // Only snap to bottom if they were already there
+                if (isNearBottom) {
+                    box.scrollTop = box.scrollHeight;
+                }
+            } catch (e) { }
+        }
+
+        setInterval(updateStats, 5000);
+        setInterval(refresh, 5000);
+        setInterval(pollLogs, 2000);
+        setInterval(() => document.getElementById('clock').innerText = new Date().toLocaleTimeString(), 1000);
+        refresh(); updateStats();
+    </script>
+</body>
+
+</html>

@@ -9,7 +9,7 @@ import sys
 import os
 
 sys.path.append('.')
-
+from data.fetch_mt5 import fetch_data
 from env.trading_env_v3 import AdvancedTradingEnv
 from features.indicators_v2 import build_features, get_feature_columns
 from evaluation.metrics import calculate_all_metrics, print_metrics_report
@@ -19,9 +19,8 @@ from evaluation.visualizations import (
 )
 
 
+
 def evaluate_model(
-    model_path: str,
-    data_path: str,
     symbol: str = "xauusd",
     timeframe: str = "m5",
     initial_cash: float = 10_000,
@@ -32,8 +31,6 @@ def evaluate_model(
     Comprehensive model evaluation with visualizations
     
     Args:
-        model_path: Path to trained model
-        data_path: Path to test data CSV
         symbol: Trading symbol
         timeframe: Timeframe
         initial_cash: Initial portfolio value
@@ -48,11 +45,17 @@ def evaluate_model(
     os.makedirs(output_dir, exist_ok=True)
     
     # Load model
-    print(f"\n🤖 Loading model: {model_path}")
+    model_path = f"models/{symbol}/experts/{symbol}_{timeframe}_ppo_expert.zip"
+    data_path = f"data/{symbol}_{timeframe}.csv"
+
+    print(f"\n Loading model: {model_path}")
     model = PPO.load(model_path)
     
     # Load and prepare data
-    print(f"\n📊 Loading data: {data_path}")
+    if not os.path.exists(data_path):
+        fetch_data(symbol, timeframe)
+    
+    print(f"\n Loading data: {data_path}")
     df = pd.read_csv(data_path)
     print(f"   Raw data shape: {df.shape}")
     
@@ -70,7 +73,7 @@ def evaluate_model(
     print(f"   Test set size: {len(test_df)}")
     
     # Create environment
-    print(f"\n🏗️  Creating test environment...")
+    print(f"\n  Creating test environment...")
     env = AdvancedTradingEnv(
         df=test_df,
         feature_columns=feature_columns,
@@ -94,23 +97,23 @@ def evaluate_model(
     
     vec_normalize = None
     if os.path.exists(vec_normalize_path):
-        print(f"   📈 Loading normalization stats: {vec_normalize_path}")
+        print(f"   Loading normalization stats: {vec_normalize_path}")
         vec_normalize = VecNormalize.load(vec_normalize_path, venv)
         vec_normalize.training = False  # Don't update stats during eval
         vec_normalize.norm_reward = False  # Don't normalize rewards during eval
     else:
-        print(f"   ⚠️  No normalization stats found at {vec_normalize_path}. Observations will be raw.")
+        print(f"    No normalization stats found at {vec_normalize_path}. Observations will be raw.")
     
     # Check feature consistency
     expected_n_features = model.observation_space.shape[0] - 3  # env adds 3 portfolio features
     actual_n_features = len(feature_columns)
     if expected_n_features != actual_n_features:
-        print(f"\n❌ Feature mismatch! Model expects {expected_n_features} features, but got {actual_n_features}.")
+        print(f"\nFeature mismatch! Model expects {expected_n_features} features, but got {actual_n_features}.")
         print(f"   Check your get_feature_columns() and build_features() output.")
         # But try to proceed if possible or exit
     
     # Run evaluation
-    print(f"\n🚀 Running evaluation...")
+    print(f"\nRunning evaluation...")
     obs, _ = env.reset()
     done = False
     
@@ -134,10 +137,10 @@ def evaluate_model(
         if step % 1000 == 0:
             print(f"   Step {step}/{len(test_df)} - Portfolio: ${info['portfolio_value']:,.2f}")
     
-    print(f"\n✅ Evaluation complete!")
+    print(f"\nEvaluation complete!")
     
     # Get comprehensive metrics
-    print(f"\n📊 Calculating metrics...")
+    print(f"\nCalculating metrics...")
     metrics = calculate_all_metrics(env.portfolio_values, env.trades, initial_cash)
     
     # Print metrics report
@@ -147,11 +150,11 @@ def evaluate_model(
     metrics_df = pd.DataFrame([metrics])
     metrics_file = f"{output_dir}/{symbol}_{timeframe}_test_metrics.csv"
     metrics_df.to_csv(metrics_file, index=False)
-    print(f"\n💾 Metrics saved: {metrics_file}")
+    print(f"\nMetrics saved: {metrics_file}")
     
     # Generate visualizations
     if save_plots:
-        print(f"\n📈 Generating visualizations...")
+        print(f"\nGenerating visualizations...")
         
         # Equity curve
         print("   - Equity curve with drawdown...")
@@ -190,10 +193,10 @@ def evaluate_model(
             save_path=f"{output_dir}/{symbol}_{timeframe}_actions.png"
         )
         
-        print(f"\n✅ Visualizations saved to: {output_dir}/")
+        print(f"\nVisualizations saved to: {output_dir}/")
     
     # Baseline comparison: Buy and Hold
-    print(f"\n📊 Baseline Comparison: Buy and Hold")
+    print(f"\nBaseline Comparison: Buy and Hold")
     print("-" * 80)
     
     buy_hold_values = [initial_cash]
@@ -212,9 +215,9 @@ def evaluate_model(
     print(f"Outperformance:     {(ppo_return - buy_hold_return):>10.2%}")
     
     if ppo_return > buy_hold_return:
-        print(f"\n✅ PPO agent outperformed buy-and-hold by {(ppo_return - buy_hold_return)*100:.2f}%")
+        print(f"\nPPO agent outperformed buy-and-hold by {(ppo_return - buy_hold_return)*100:.2f}%")
     else:
-        print(f"\n⚠️  PPO agent underperformed buy-and-hold by {(buy_hold_return - ppo_return)*100:.2f}%")
+        print(f"\nPPO agent underperformed buy-and-hold by {(buy_hold_return - ppo_return)*100:.2f}%")
     
     # Plot comparison
     if save_plots:
@@ -271,7 +274,7 @@ def cross_timeframe_evaluation(model_path: str, symbol: str = "xauusd"):
             
             results[tf] = metrics
         else:
-            print(f"\n⚠️  Data file not found: {data_path}")
+            print(f"\nData file not found: {data_path}")
     
     # Summary comparison
     if len(results) > 1:
@@ -283,7 +286,7 @@ def cross_timeframe_evaluation(model_path: str, symbol: str = "xauusd"):
         print(comparison_df[['total_return', 'sharpe_ratio', 'max_drawdown', 'win_rate', 'profit_factor']])
         
         comparison_df.to_csv("results/cross_timeframe_comparison.csv")
-        print(f"\n💾 Comparison saved: results/cross_timeframe_comparison.csv")
+        print(f"\nComparison saved: results/cross_timeframe_comparison.csv")
     
     return results
 
@@ -292,10 +295,6 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description='Evaluate PPO trading agent')
-    parser.add_argument('--model', type=str, default='models/xauusd/experts/xauusd_m5_ppo_expert',
-                        help='Path to trained model')
-    parser.add_argument('--data', type=str, default='data/xauusd_m5.csv',
-                        help='Path to test data')
     parser.add_argument('--symbol', type=str, default='xauusd',
                         help='Trading symbol')
     parser.add_argument('--timeframe', type=str, default='m5',
@@ -311,10 +310,8 @@ if __name__ == "__main__":
     else:
         # Single evaluation
         evaluate_model(
-            model_path=args.model,
-            data_path=args.data,
             symbol=args.symbol,
             timeframe=args.timeframe,
             save_plots=True,
-            output_dir="results"
+            output_dir="reports"
         )
