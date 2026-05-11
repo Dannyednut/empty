@@ -1,4 +1,4 @@
-# PPO Sniper - Institutional Trading Ecosystem
+# PPO Sniper - Trading Ecosystem
 
 Advanced reinforcement learning trading suite using Proximal Policy Optimization (PPO). This platform features a dual-engine architecture (**Sniper V4** for Scalping and **Expert V3** for Sessioned Trading), managed through a unified, high-performance web dashboard.
 
